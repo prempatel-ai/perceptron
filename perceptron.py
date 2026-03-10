@@ -1,55 +1,60 @@
 import numpy as np
 
 
-class perceptron:
-     
-    def __init__(self,input_size):
-        
+class Perceptron:
+
+    def __init__(self, input_size):
         self.weights = np.random.randn(input_size)
-        self.bais = np.random.randn(1)
+        self.bias = np.random.randn()
+        self.loss_history = []
 
-
-    def sigmoid(self,Z):
-        
-        return 1 / (1+np.exp(-Z))
+    def sigmoid(self, Z):
+        return 1 / (1 + np.exp(-Z))
 
     def predict(self, inputs):
-
-        weighted_sum = np.dot(inputs,self.weights) + self.bais
-
-        return self.sigmoid(weighted_sum)
+        z = np.dot(inputs, self.weights) + self.bias
+        return self.sigmoid(z)
 
     def fit(self, inputs, targets, num_epochs, learning_rate):
         num_examples = inputs.shape[0]
+        self.loss_history = []
 
         for epoch in range(num_epochs):
-            for  i in range(num_examples):
+            epoch_loss = 0
+
+            for i in range(num_examples):
                 input_vector = inputs[i]
                 target = targets[i]
                 prediction = self.predict(input_vector)
                 error = target - prediction
-                gradient_weights = error * prediction * (1 - prediction)  
+
+                epoch_loss += error ** 2
+
+                gradient_weights = error * prediction * (1 - prediction) * input_vector
                 self.weights += learning_rate * gradient_weights
-                gradient_bias = error*prediction*(1-prediction)
-                self.bias += learning_rate* gradient_bias
-            
-        print(f"Epoch {epoch+1}/{num_epochs} done!")
 
-    def evaluate(self,inputs,target):
+                gradient_bias = error * prediction * (1 - prediction)
+                self.bias += learning_rate * gradient_bias
+
+            avg_loss = epoch_loss / num_examples
+            self.loss_history.append(float(avg_loss))
+            print(f"Epoch {epoch+1}/{num_epochs}  |  Loss: {round(float(avg_loss), 4)}")
+
+    def evaluate(self, inputs, targets):
         correct = 0
-        for input_vector,target in zip(input,target):
+        for input_vector, target in zip(inputs, targets):
             prediction = self.predict(input_vector)
-            if prediction >=0.5:
-                prediction_class=1
+            predicted_class = 1 if prediction >= 0.5 else 0
+            if predicted_class == target:
+                correct += 1
+        return correct / len(inputs)
 
-            else:
-                prediction_class = 0
+    def save(self, filename):
+        np.save(filename, {'weights': self.weights, 'bias': self.bias})
+        print(f"saved to {filename}.npy")
 
-            if prediction_class == target:
-                correct+=1
-
-
-        accuracy = correct / len (inputs)
-
-        return accuracy
-    
+    def load(self, filename):
+        data = np.load(filename, allow_pickle=True).item()
+        self.weights = data['weights']
+        self.bias = data['bias']
+        print(f"loaded from {filename}.npy")
